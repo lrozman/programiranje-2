@@ -148,18 +148,121 @@ impl GZ {
 // AMpak ubistvu hpčeš metode, da loh verižš, pa da ni tko funkcija isto. Tkoda fn fst(self), sam spet je prevzel lastištvo, ker smo ga notr podal.
 // Tkoda rabš met &self
 
+//__________________________________________________________________________________________________________________________________
+//Matematične izraze (in tudi programe) enostavno predstavimo z drevesi, ki jih tipično imenujemo abstraktno sintaktično drevo (AST).
 
+// Najprej definirajte sledeči strukturi:
+// ```rust
+// enum BinOperacija {
+//     Plus,
+//     Minus,
+//     Times,
+// }
+
+// enum Izraz {
+//     Konstanta(u32),
+//     Operacija(Box<Izraz>, BinOperacija, Box<Izraz>),
+// }
+// ```
+// 1. Poskusite napisati tip za `Izraz` brez uporabe `Box` in skupaj s prevajalnikom razmislite, zakaj to ne deluje.
+// 1. Razmislite, ali je potrebno v zapis izraza dodati tudi oklepaje, ali je dovolj že to, da drevo pravilno predstavlja izraz.
+// 1. Zapišite primer izrazov za:
+//     - `1 + (2 * 3)`
+//     - `(1 + 2) * 3`
+//     - `1 + 2 + 3`
+//     - `5**2 + 3**2`
+//     - `5 * 5 + 4**2`
+// 1. Implementirajte metodo `eval`, ki izračuna vrednost izraza.
+// 1. Implementirajte metodo `collect`, ki vrne število konstant v izrazu.
+// 1. Implementirajte za izpisovanje `izpis`, ki vrne izraz v obliki `(a + b) * c`.
+// Poskrbite, da boste pravilno izpisali oklepaje, vendar se ne obremenjujte, če izpište kakšen dodaten oklepaj.
+// 1. Napišite nekaj primernih testov za metode `eval`, `collect` in `izpis`.
+//----------------------------------------------------------------------------------------------------------------------------------
+
+enum BinOperacija {
+    Plus,
+    Minus,
+    Times,
+    Potenca,
+}
+
+enum Izraz {
+    Konstanta(u32),
+    Operacija(Box<Izraz>, BinOperacija, Box<Izraz>),
+}
+//"recursive without indirection"- to napiše. In "insert some indirection (e.g., a `Box`, `Rc`, or `&`) to break the cycle"
+// Ampak ne vem, kaj to pomen, iskreno.
+
+//Fora dreves je, da ne rabš oklepajev. Z drevesom loh predstavš vsak izraz. 2 * (4 + 5)
+// Bo drevp iz zvezdice v 2 in v +, k gre pa v 4 in v 5
+// Oklepaji so nekak ta poddrevesa. Ne morte sploh z dvojko pa štirko hkrati nč nardit.
+
+impl Izraz {
+    fn eval(&self) -> i32 {
+        match self {
+            Self::Operacija(i1, BinOperacija::Plus, i2) => i1.eval() + i2.eval(), // Zakaj ga te boxi nč ne motjo? Ne razumem, kaj se dogaja.
+            Self::Operacija(i1, BinOperacija::Minus, i2) => i1.eval() - i2.eval(),
+            Self::Operacija(i1, BinOperacija::Times, i2) => i1.eval() * i2.eval(),
+            Self::Operacija(i1, BinOperacija::Potenca, i2) => i1.eval().pow(i2.eval().try_into().unwrap()), // Oni bi rajš, da jo sami definirajo, js bom dala power
+            Self::Konstanta(k) => (*k).try_into().unwrap(),
+        }
+    }
+
+    fn collect(&self) -> u32 {
+        fn pomozna(izraz: &Izraz) -> u32 {
+            match izraz {
+                Izraz::Operacija(i1, _, i2) => pomozna(i1) + pomozna(i2),
+                Izraz::Konstanta(_) => 1,
+            }
+        }
+        return pomozna(self);
+    }
+
+    fn izpis(&self) -> String {
+        match self {
+            Self::Operacija(i1, BinOperacija::Plus, i2) => String::from("(") + &i1.izpis() + &String::from(" + ") + &i2.izpis() + &String::from(")"), // Zakaj ga te boxi nč ne motjo? Ne razumem, kaj se dogaja.
+            Self::Operacija(i1, BinOperacija::Minus, i2) => String::from("(") + &i1.izpis() + &String::from(" - ") + &i2.izpis() + &String::from(")"),
+            Self::Operacija(i1, BinOperacija::Times, i2) => String::from("(") + &i1.izpis() + &String::from(" * ") + &i2.izpis() + &String::from(")"),
+            Self::Operacija(i1, BinOperacija::Potenca, i2) => String::from("(") + &i1.izpis() + &String::from("**") + &i2.izpis() + &String::from(")"), // Oni bi rajš, da jo sami definirajo, js bom dala power
+            Self::Konstanta(k) => (*k).to_string(),
+        }        // Piše, naj se ne obrememenjujem, če izpišem kakšenm dodaten oklepaj
+    }
+}
+
+// PISANJE TESTOV !!!!!!!!!!!!!!!!!!
 
 fn main() {
-    let mut z1 = GZ::new(1, 2);
-    println!("{}", z1.next());
-    println!("{}", z1.next());
-    println!("{}", z1.n_th(16));
-    z1.reset();
-    println!("{}", z1.current());
-    println!("{}", z1.sum(5));
-    let mut z2 = z1.produkt(&z1);
-    println!("{}", z2.n_th(4));
+    //let mut z1 = GZ::new(1, 2);
+    //println!("{}", z1.next());
+    //println!("{}", z1.next());
+    //println!("{}", z1.n_th(16));
+    //z1.reset();
+    //println!("{}", z1.current());
+    //println!("{}", z1.sum(5));
+    //let mut z2 = z1.produkt(&z1);
+    //println!("{}", z2.n_th(4));
+    let primer1: Izraz = Izraz::Operacija(
+        Box::new(Izraz::Konstanta(1)), 
+        BinOperacija::Plus, 
+        Box::new(Izraz::Operacija(
+            Box::new(Izraz::Konstanta(2)), 
+            BinOperacija::Times, 
+            Box::new(Izraz::Konstanta(3))))
+    );
+    let primer4: Izraz = Izraz::Operacija(
+        Box::new(Izraz::Operacija(
+            Box::new(Izraz::Konstanta(5)), BinOperacija::Potenca, Box::new(Izraz::Konstanta(2)))),
+        BinOperacija::Plus,
+        Box::new(Izraz::Operacija(
+            Box::new(Izraz::Konstanta(3)), BinOperacija::Potenca, Box::new(Izraz::Konstanta(2))
+        ))
+    );
+    let rezultat = primer4.eval();
+    println!("{rezultat}");
+    let collection = primer4.collect();
+    println!("{collection}");
+    let niz = primer1.izpis();
+    println!("{}", niz);
 }
 
 
